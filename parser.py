@@ -17,6 +17,39 @@ def parse_authors(authors_string: str) -> List[Dict[str, str]]:
     return authors
 
 
+def parse_standard_journal_citation(citation: str) -> Dict[str, Any]:
+    match = re.search(r'([\w\s]+),\s*(\d+)\((\d+)\),\s*(\d+(?:-\d+)?)', citation)
+    if match:
+        return {
+            "journal_name": match.group(1).strip(),
+            "volume": match.group(2),
+            "issue": match.group(3),
+            "page_range": match.group(4)
+        }
+    return None
+
+def parse_journal_citation_with_volume(citation: str) -> Dict[str, Any]:
+    match = re.search(r'([\w\s]+),\s*(\d+),\s*(\d+(?:-\d+)?)', citation)
+    if match:
+        return {
+            "journal_name": match.group(1).strip(),
+            "volume": match.group(2),
+            "issue": "",
+            "page_range": match.group(3)
+        }
+    return None
+
+def parse_journal_citation_without_volume(citation: str) -> Dict[str, Any]:
+    match = re.search(r'([\w\s]+),\s*(\d+(?:-\d+)?)', citation)
+    if match:
+        return {
+            "journal_name": match.group(1).strip(),
+            "volume": "",
+            "issue": "",
+            "page_range": match.group(2)
+        }
+    return None
+
 def parse_journal_citation(citation: str) -> Dict[str, Any]:
     result = {
         "source_type": "journal",
@@ -43,20 +76,13 @@ def parse_journal_citation(citation: str) -> Dict[str, Any]:
     if title_match:
         result["title"] = title_match.group(1).strip()
 
-    # Extract journal information
-    # First, try to match the standard format with volume and issue
-    journal_match = re.search(r'([\w\s]+),\s*(\d+)\((\d+)\),\s*(\d+(?:-\d+)?)', citation)
-    if journal_match:
-        result["journal_name"] = journal_match.group(1).strip()
-        result["volume"] = journal_match.group(2)
-        result["issue"] = journal_match.group(3)
-        result["page_range"] = journal_match.group(4)
-    else:
-        # If standard format doesn't match, try to match format without volume and issue
-        journal_match = re.search(r'([\w\s]+),\s*(\d+(?:-\d+)?)', citation)
-        if journal_match:
-            result["journal_name"] = journal_match.group(1).strip()
-            result["page_range"] = journal_match.group(2)
+    # Try different journal citation formats
+    journal_info = parse_standard_journal_citation(citation) or \
+                   parse_journal_citation_with_volume(citation) or \
+                   parse_journal_citation_without_volume(citation)
+
+    if journal_info:
+        result.update(journal_info)
 
     # Extract DOI if present
     doi_match = re.search(r'https?://doi\.org/(10\.\d{4,}[\w\d\.\-\/]+)', citation)
